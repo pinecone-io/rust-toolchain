@@ -6,11 +6,8 @@ branding:
   color: purple
 
 inputs:
-  toolchain:
-    description: Rust toolchain specification -- see https://rust-lang.github.io/rustup/concepts/toolchains.html#toolchain-specification
-    required: true
   targets:
-    description: Comma-separated list of target triples to install for this toolchain
+    description: Comma-separated list of target triples to install for the toolchain
     required: false
   target:
     description: Alias for `targets`
@@ -27,8 +24,15 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Get toolchain version from rust-toolchain file
+      id: toolchain_version
+      uses: SebRollen/toml-action@v1.0.2
+      with:
+        file: 'rust-toolchain'
+        field: 'toolchain.channel'
     - id: parse
       run: |
+        toolchain=${{ steps.toolchain_version.outputs.value }}
         : parse toolchain version
         if [[ $toolchain =~ ^stable' '[0-9]+' '(year|month|week|day)s?' 'ago$ ]]; then
           if [[ ${{runner.os}} == macOS ]]; then
