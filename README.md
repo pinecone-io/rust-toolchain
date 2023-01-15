@@ -38,14 +38,6 @@ All inputs are optional.
   <th>Description</th>
 </tr>
 <tr>
-  <td><code>toolchain</code></td>
-  <td>
-    Rustup toolchain specifier e.g. <code>stable</code>, <code>nightly</code>, <code>1.42.0</code>, <code>nightly-2022-01-01</code>.
-    <b>Important: the default is to match the @rev as described above.</b>
-    When passing an explicit <code>toolchain</code> as an input instead of @rev, you'll want to use "dtolnay/rust-toolchain@master" as the revision of the action.
-  </td>
-</tr>
-<tr>
   <td><code>targets</code></td>
   <td>Comma-separated string of additional targets to install e.g. <code>wasm32-unknown-unknown</code></td>
 </tr>
@@ -59,24 +51,7 @@ All inputs are optional.
 
 ## Toolchain expressions
 
-The following forms are available for projects that use a sliding window of
-compiler support.
-
-```yaml
-     # Installs the most recent stable toolchain as of the specified time
-     # offset, which may be written in years, months, weeks, or days.
-  - uses: dtolnay/rust-toolchain@master
-    with:
-      toolchain: stable 18 months ago
-```
-
-```yaml
-     # Installs the stable toolchain which preceded the most recent one by
-     # the specified number of minor versions.
-  - uses: dtolnay/rust-toolchain@master
-    with:
-      toolchain: stable minus 8 releases
-```
+The toolchain version is read from the `rust-toolchain` file of the code repository.
 
 <br>
 
