@@ -73,7 +73,7 @@ runs:
       shell: bash
 
     - name: rustup toolchain install ${{steps.parse.outputs.toolchain}}
-      run: rustup toolchain install ${{steps.parse.outputs.toolchain}}${{steps.flags.outputs.targets}}${{steps.flags.outputs.components}} --profile minimal${{steps.flags.outputs.downgrade}} --no-self-update
+      run: rustup toolchain uninstall ${{steps.parse.outputs.toolchain}} & rustup toolchain install ${{steps.parse.outputs.toolchain}}${{steps.flags.outputs.targets}}${{steps.flags.outputs.components}} --profile minimal${{steps.flags.outputs.downgrade}} --no-self-update
       shell: bash
 
     - run: rustup default ${{steps.parse.outputs.toolchain}}
