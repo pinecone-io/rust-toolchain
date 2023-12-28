@@ -20,6 +20,9 @@ outputs:
   cachekey:
     description: A short hash of the rustc version, appropriate for use as a cache key. "20220627a831"
     value: ${{steps.rustc-version.outputs.cachekey}}
+  name:
+    description: Rustup's name for the selected version of the toolchain. "1.62.0"  # suitable for use with `cargo +${{steps.toolchain.outputs.name}}`
+    value: ${{steps.parse.outputs.toolchain}}
 
 runs:
   using: composite
@@ -62,8 +65,8 @@ runs:
 
     - run: |
         : install rustup if needed
-        if ! command -v rustup &> /dev/null ; then
-          curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused -fsSL "https://sh.rustup.rs" | sh -s -- --default-toolchain none -y
+        if ! command -v rustup &>/dev/null; then
+          curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused --location --silent --show-error --fail "https://sh.rustup.rs" | sh -s -- --default-toolchain none -y
           echo "${CARGO_HOME:-$HOME/.cargo}/bin" >> $GITHUB_PATH
         fi
       if: runner.os != 'Windows'
@@ -86,18 +89,38 @@ runs:
 
     - run: |
         : disable incremental compilation
-        echo CARGO_INCREMENTAL=0 >> $GITHUB_ENV
+        if [ -z "${CARGO_INCREMENTAL+set}" ]; then
+          echo CARGO_INCREMENTAL=0 >> $GITHUB_ENV
+        fi
       shell: bash
 
     - run: |
         : enable colors in Cargo output
-        echo CARGO_TERM_COLOR=always >> $GITHUB_ENV
+        if [ -z "${CARGO_TERM_COLOR+set}" ]; then
+          echo CARGO_TERM_COLOR=always >> $GITHUB_ENV
+        fi
       shell: bash
 
     - run: |
         : enable Cargo sparse registry
-        echo CARGO_UNSTABLE_SPARSE_REGISTRY=true >> $GITHUB_ENV
-        echo REGISTRIES_CRATES_IO_PROTOCOL=sparse >> $GITHUB_ENV
+        # implemented in 1.66, stabilized in 1.68, made default in 1.70
+        if [ -z "${CARGO_REGISTRIES_CRATES_IO_PROTOCOL+set}" -o -f "${{runner.temp}}"/.implicit_cargo_registries_crates_io_protocol ]; then
+          if rustc +${{steps.parse.outputs.toolchain}} --version --verbose | grep -q '^release: 1\.6[89]\.'; then
+            touch "${{runner.temp}}"/.implicit_cargo_registries_crates_io_protocol || true
+            echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse >> $GITHUB_ENV
+          elif rustc +${{steps.parse.outputs.toolchain}} --version --verbose | grep -q '^release: 1\.6[67]\.'; then
+            touch "${{runner.temp}}"/.implicit_cargo_registries_crates_io_protocol || true
+            echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=git >> $GITHUB_ENV
+          fi
+        fi
+      shell: bash
+
+    - run: |
+        : work around spurious network errors in curl 8.0
+        # https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo/topic/timeout.20investigation
+        if rustc +${{steps.parse.outputs.toolchain}} --version --verbose | grep -q '^release: 1\.7[01]\.'; then
+          echo CARGO_HTTP_MULTIPLEXING=false >> $GITHUB_ENV
+        fi
       shell: bash
 
     - run: rustc +${{steps.parse.outputs.toolchain}} --version --verbose
